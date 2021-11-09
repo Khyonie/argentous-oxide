@@ -1,3 +1,8 @@
+use crate::component::cartridge::Cartridge;
+use std::{env::current_dir, time::SystemTime};
+
+use nfd::Response;
+
 mod component;
 
 // Copyright (c) 2021-2022 Hailey "Yuki_emeralis" Garrett [yukiemeralis@gmail.com]
@@ -22,5 +27,34 @@ mod component;
 
 fn main() 
 {
-    println!("");
+    let path = loop {
+        let result = nfd::open_file_dialog(None, current_dir().unwrap().to_str()).unwrap();
+
+        let filepath: String = match result
+        {
+            Response::Okay(f) => {
+                f
+            },
+            Response::OkayMultiple(_) => panic!(), // Not quite sure how this can fire here. Panic if it does.
+            Response::Cancel => {
+                println!("Operation cancelled. Exiting...");
+                std::process::exit(0);
+            },
+        };
+
+        if !filepath.ends_with(".gb")
+        {
+            println!("Expected file to have a .gb extension.");
+            continue;
+        }
+
+        break filepath;
+    };
+    
+    let time = SystemTime::now();
+    let cart: Cartridge = Cartridge::read_rom(path.as_str());
+
+    println!("Load time: {} μs", time.elapsed().unwrap().as_micros());
+
+    cart.read_cart_data();
 }
