@@ -1,13 +1,25 @@
+#![allow(dead_code)]
+
 use std::{fs::read, path::Path};
 
-/// Logo bytes
-const LOGO_DUMP: [u8; 48] = [0xCE, 0xED, 0x66, 0x66, 0xCC, 0x0D, 0x00, 0x0B, 0x03, 0x73, 0x00, 0x83, 0x00, 0x0C, 0x00, 0x0D, 0x00, 0x08, 0x11, 0x1F, 0x88, 0x89, 0x00, 0x0E, 0xDC, 0xCC, 0x6E, 0xE6, 0xDD, 0xDD, 0xD9, 0x99, 0xBB, 0xBB, 0x67, 0x63, 0x6E, 0x0E, 0xEC, 0xCC, 0xDD, 0xDC, 0x99, 0x9F, 0xBB, 0xB9, 0x33, 0x3E];
+use crate::lookups;
 
-#[allow(dead_code)]
 pub struct Cartridge
 {
-    rom: Vec<u8>,
-    ram: Vec<u8>
+    pub rom: Vec<u8>,
+    pub ram: Vec<u8>,
+    
+    meta: CartridgeMeta
+}
+
+pub struct CartridgeMeta
+{
+    title: String,
+    sgb_supported: bool,
+    cart_specs: (String, u16, u8, bool, bool),
+    rom_size: u16,
+    destination: String,
+    version: u8
 }
 
 impl Cartridge
@@ -26,56 +38,48 @@ impl Cartridge
             },
         };
 
+        let meta: CartridgeMeta = {
+            populate_cart_meta(&rom)
+        };
+
         Cartridge { 
             rom,
-            ram: Vec::new()
+            ram: Vec::new(),
+            meta
         }
     }
 
-    pub fn read_cart_data(&self) 
+    
+}
+
+fn populate_cart_meta(data: &Vec<u8>) -> CartridgeMeta
+{
+    let title: String = data[0x134..=0x143]
+        .iter()
+        .map(| b | *b as char)
+        .collect::<String>();
+
+    let sgb_supported = data[0x146] == 0x03;
+
+    let pre_specs = lookups::mbc_type(data[0x147]);
+    let cart_specs = (pre_specs.0.to_string(), pre_specs.1, pre_specs.2, pre_specs.3, pre_specs.4);
+
+    let rom_size: u16 = 32 << data[0x148];
+
+    let destination: String = match data[0x14A]
     {
-        // Read off header bytes
+        0x00 => "Japan".to_string(),
+        _ => "Global".to_string()
+    };
 
-        // Title
-        let name: &str = &self.rom[0x134..=0x143] // Take the bytes that hold the title,
-            .iter() // turn it into an iterator,
-            .map(| n | *n as char) // map the bytes to chars,
-            .collect::<String>(); // and collect it into a String
+    let version: u8 = data[0x14C];
 
-        println!("Cartridge title: {}", name);
-
-        // Logo
-        let logo: [u8; 48] = self.rom[0x104..=0x133].try_into().unwrap();
-        if logo != LOGO_DUMP
-        {
-            println!("Invalid Nintendo logo. This may mean the ROM is corrupt, or it is an unofficial cartridge.");
-        } else {
-            println!("Valid Nintendo logo found.");
-        }
-
-        // ROM size
-        println!("ROM size: {}KiB", 32 << self.rom[0x148]);
-
-        // RAM size
-        println!("RAM size: {}KiB", match self.rom[0x149] {
-            0 => {
-                "0"
-            },
-            2 => {
-                "8"
-            },
-            3 => {
-                "32"
-            },
-            4 => {
-                "128"
-            },
-            5 => {
-                "64"
-            },
-            _ => {
-                "Unknown"
-            }
-        });
+    CartridgeMeta {
+        title,
+        sgb_supported,
+        cart_specs,
+        rom_size,
+        destination,
+        version,
     }
 }
