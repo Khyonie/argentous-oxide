@@ -26,6 +26,7 @@ impl Cartridge
 {
     pub fn read_rom(path: &str) -> Self
     {
+        println!("Reading from \"{}\"...", path);
         let rom: Vec<u8> = match read(Path::new(path))
         {
             Ok(d) => { 

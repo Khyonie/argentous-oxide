@@ -143,32 +143,51 @@ impl Gameboy
         self.cartridge.as_ref().unwrap()
     }
 
-    pub fn start_cart(&mut self)
+    pub fn start_cart(&mut self, print_state: bool)
     {
         // Init PC
         // Begin execution at $0100
         self.cpu.registers.pc = 0x0100;
 
-        let mut cache: Vec<u8> = Vec::new(); // A place to store read instructions and arguments
         let mut opcode;
         let mut len;
 
+        if print_state
+        {
+            println!("----------< BEGIN READOUT >----------");
+            println!("ADDRESS   | CACHE: INST ARGL ARGH | REGISTERS: AF:   HHLL  BC:   HHLL  DE:   HHLL  HL:   HHLL");
+        }
+
         let exitcode = loop {
+            self.cpu.cache.clear();
+            self.cpu.registers.pc += 1;
+
             opcode = self.cartridge.as_ref().unwrap().rom[self.cpu.registers.pc as usize];
             len = lookups::instruction_len(&opcode);
 
             // Load bytes into cache
-            while cache.len() < (len - 1) as usize
+            while self.cpu.cache.len() < (len - 1) as usize
             {
                 self.cpu.registers.pc += 1;
-                cache.push(self.cartridge.as_ref().unwrap().rom[self.cpu.registers.pc as usize]);
+                self.cpu.cache.push(self.cartridge.as_ref().unwrap().rom[self.cpu.registers.pc as usize]);
             }
 
-            self.cpu.registers.pc += 1;
+            if print_state
+            {
+                self.cpu.print_state(opcode);
+            }
 
-
-            break 0;
+            match self.cpu.execute(opcode)
+            {
+                Some(code) => break code,
+                None => {
+                    continue;
+                },
+            }
         };
         
+        println!("----------<  END READOUT  >----------");
+
+        println!("Gameboy routine exited with exit code {} ({} | Opcode 0x{:0>2X} @ PC ${:0>4X}).", exitcode, lookups::exit_codes(exitcode), opcode, self.cpu.registers.pc - (len as u16 - 1));
     }
 }

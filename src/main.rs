@@ -5,7 +5,8 @@ use nfd::Response;
 
 mod component;
 mod emulator;
-pub mod lookups;
+mod lookups;
+pub mod cpu;
 
 // Copyright (c) 2021-2022 Hailey "Yuki_emeralis" Garrett [yukiemeralis@gmail.com]
 
@@ -54,12 +55,18 @@ fn main()
     };
     
     let time = SystemTime::now();
-    let cart: Cartridge = Cartridge::read_rom(path.as_str());
+    {
+        let cart: Cartridge = Cartridge::read_rom(path.as_str());
 
-    println!("Load time: {} μs\n", time.elapsed().unwrap().as_micros());
+        println!("Load time: {} μs\n", time.elapsed().unwrap().as_micros());
 
-    let mut system: Gameboy = Gameboy::construct();
+        let mut system: Gameboy = Gameboy::construct();
 
-    system.insert_cartridge(cart);
-    system.read_cart_data();
+        system.insert_cartridge(cart);
+        system.read_cart_data();
+
+        system.start_cart(true);
+    }
+
+    println!("Cartridge has been removed from memory.")
 }
