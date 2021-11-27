@@ -147,7 +147,7 @@ pub fn instruction_len(opcode: &u8) -> u8
 {
     match *opcode
     {
-        0x06 | 0x0E | 0x16 | 0x18 | 0x1E | 0x20 | 0x26 | 0x28 | 0x2E | 0x30 | 0x36 | 0x38 | 0x3E | 0xC6 | 0xCE | 0xD6 | 0xDE | 0xE0 | 0xE6 | 0xE8 | 0xEE | 0xF0 | 0xF6 | 0xF8 | 0xFE => {
+        0x06 | 0x0E | 0x16 | 0x18 | 0x1E | 0x20 | 0x26 | 0x28 | 0x2E | 0x30 | 0x36 | 0x38 | 0x3E | 0xC6 | 0xCB | 0xCE | 0xD6 | 0xDE | 0xE0 | 0xE6 | 0xE8 | 0xEE | 0xF0 | 0xF6 | 0xF8 | 0xFE => {
             2
         },
         0x01 | 0x08 | 0x11 | 0x21 | 0x31 | 0xC2 | 0xC3 | 0xC4 | 0xCA | 0xCC | 0xCD | 0xD2 | 0xD4 | 0xDA | 0xDC | 0xEA | 0xFA => {
@@ -167,6 +167,7 @@ pub fn exit_codes(exit_code: u8) -> &'static str
         1 => "General error",
         3 => "Unimplemented opcode",
         4 => "Unknown opcode",
+        6 => "Unknown prefixed opcode",
         _ => "Undefined"
     }
 }
@@ -205,7 +206,7 @@ pub const GRAND_OPCODE: [(u8, &str, u8); 256] = [
     (0x1D, "DEC", 1),
     (0x1E, "LD", 2),
     (0x1F, "RRA", 1),
-    (0x20, "JR", 2),
+    (0x20, "JR_NZ", 2),
     (0x21, "LD", 3),
     (0x22, "LD", 1),
     (0x23, "INC", 1),
@@ -213,7 +214,7 @@ pub const GRAND_OPCODE: [(u8, &str, u8); 256] = [
     (0x25, "DEC", 1),
     (0x26, "LD", 2),
     (0x27, "DAA", 1),
-    (0x28, "JR", 2),
+    (0x28, "JR_Z", 2),
     (0x29, "ADD", 1),
     (0x2A, "LD", 1),
     (0x2B, "DEC", 1),
@@ -221,7 +222,7 @@ pub const GRAND_OPCODE: [(u8, &str, u8); 256] = [
     (0x2D, "DEC", 1),
     (0x2E, "LD", 2),
     (0x2F, "CPL", 1),
-    (0x30, "JR", 2),
+    (0x30, "JR_NC", 2),
     (0x31, "LD", 3),
     (0x32, "LD", 1),
     (0x33, "INC", 1),
@@ -229,13 +230,13 @@ pub const GRAND_OPCODE: [(u8, &str, u8); 256] = [
     (0x35, "DEC", 1),
     (0x36, "LD", 2),
     (0x37, "SCF", 1),
-    (0x38, "JR", 2),
+    (0x38, "JR_C", 2),
     (0x39, "ADD", 1),
     (0x3A, "LD", 1),
     (0x3B, "DEC", 1),
     (0x3C, "INC", 1),
     (0x3D, "DEC", 1),
-    (0x3E, "LD", 2),
+    (0x3E, "LD_A_8", 2),
     (0x3F, "CCF", 1),
     (0x40, "LD", 1),
     (0x41, "LD", 1),
@@ -348,7 +349,7 @@ pub const GRAND_OPCODE: [(u8, &str, u8); 256] = [
     (0xAC, "XOR", 1),
     (0xAD, "XOR", 1),
     (0xAE, "XOR", 1),
-    (0xAF, "XOR", 1),
+    (0xAF, "XOR_A", 1),
     (0xB0, "OR", 1),
     (0xB1, "OR", 1),
     (0xB2, "OR", 1),
@@ -376,7 +377,7 @@ pub const GRAND_OPCODE: [(u8, &str, u8); 256] = [
     (0xC8, "RET", 1),
     (0xC9, "RET", 1),
     (0xCA, "JP", 3),
-    (0xCB, "PREFIX", 1),
+    (0xCB, "PRFIX", 1),
     (0xCC, "CALL", 3),
     (0xCD, "CALL", 3),
     (0xCE, "ADC", 2),
@@ -397,7 +398,7 @@ pub const GRAND_OPCODE: [(u8, &str, u8); 256] = [
     (0xDD, "ILLEGAL_DD", 1),
     (0xDE, "SBC", 2),
     (0xDF, "RST", 1),
-    (0xE0, "LDH", 2),
+    (0xE0, "LD_a_A", 2),
     (0xE1, "POP", 1),
     (0xE2, "LD", 1),
     (0xE3, "ILLEGAL_E3", 1),
@@ -407,13 +408,13 @@ pub const GRAND_OPCODE: [(u8, &str, u8); 256] = [
     (0xE7, "RST", 1),
     (0xE8, "ADD", 2),
     (0xE9, "JP", 1),
-    (0xEA, "LD", 3),
+    (0xEA, "LD_A", 3),
     (0xEB, "ILLEGAL_EB", 1),
     (0xEC, "ILLEGAL_EC", 1),
     (0xED, "ILLEGAL_ED", 1),
     (0xEE, "XOR", 2),
     (0xEF, "RST", 1),
-    (0xF0, "LDH", 2),
+    (0xF0, "LD_A,a", 2),
     (0xF1, "POP", 1),
     (0xF2, "LD", 1),
     (0xF3, "DI", 1),

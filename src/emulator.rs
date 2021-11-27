@@ -147,7 +147,7 @@ impl Gameboy
     {
         // Init PC
         // Begin execution at $0100
-        self.cpu.registers.pc = 0x0100;
+        self.cpu.registers.pc = 0x00FF;
 
         let mut opcode;
         let mut len;
@@ -155,7 +155,7 @@ impl Gameboy
         if print_state
         {
             println!("----------< BEGIN READOUT >----------");
-            println!("ADDRESS   | CACHE: INST ARGL ARGH | REGISTERS: AF:   HHLL  BC:   HHLL  DE:   HHLL  HL:   HHLL");
+            println!("ADDRESS:  | CACHE: INST   ARGL ARGH | REGISTERS: AF:   HHLL  BC:   HHLL  DE:   HHLL  HL:   HHLL | FLAGS:");
         }
 
         let exitcode = loop {
